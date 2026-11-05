@@ -34,3 +34,38 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data)
     KPM_TB_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data")
 endif()
 add_test(NAME r1 COMMAND test_r1)
+
+add_executable(test_r2 tests/test_r2.cpp)
+target_link_libraries(test_r2 PRIVATE bdg)
+target_compile_options(test_r2 PRIVATE -Wall -Wextra)
+add_test(NAME r2 COMMAND test_r2)
+
+add_executable(test_r3 tests/test_r3.cpp)
+target_link_libraries(test_r3 PRIVATE bdg)
+target_compile_options(test_r3 PRIVATE -Wall -Wextra)
+# Same read-only cross-gate as test_r1: the delta->0 L=14 gate reads
+# kpm-tightbinding's committed exact_dos_L14.csv (DESIGN.md section 3 R3).
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data)
+  target_compile_definitions(test_r3 PRIVATE
+    KPM_TB_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data")
+endif()
+add_test(NAME r3 COMMAND test_r3)
+
+add_executable(test_r4 tests/test_r4.cpp)
+target_link_libraries(test_r4 PRIVATE bdg)
+target_compile_options(test_r4 PRIVATE -Wall -Wextra)
+# Same read-only cross-gates: the R1 L=14 spectrum gate and the R3
+# delta->0 L=14 DOS gate re-run at the d-wave delta (DESIGN.md §3 R4).
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data)
+  target_compile_definitions(test_r4 PRIVATE
+    KPM_TB_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../kpm-tightbinding/data")
+endif()
+add_test(NAME r4 COMMAND test_r4)
+
+# The R3 figure generator (DESIGN.md section 3: the figure is the
+# deliverable). Not a test; writes data/dos_swave_L128.csv.
+add_executable(dos_figure src/dos_figure.cpp)
+target_link_libraries(dos_figure PRIVATE bdg)
+target_compile_options(dos_figure PRIVATE -Wall -Wextra)
+target_compile_definitions(dos_figure PRIVATE
+  BDG_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")

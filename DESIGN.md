@@ -1,13 +1,22 @@
 # DESIGN.md — kpm-bdg
 
 Design record for the Nambu/BdG extension of the KPM tight-binding core.
-Status: R1 done (2026-11-04) — `bdg_square_lattice` (s-wave) and
-`exact_eigenvalues` are implemented; every R1 gate passes at its
-pre-committed tolerance (measured: PHS 9.3e-15, delta=0 vs ± normal
-1.2e-14, Tr H_BdG = 0 exactly, periodic grid 4.9e-15, cross-repo L=14
-gate exact). R2–R6 remain throwing stubs. This note fixes the physics
-scope, the oracles, the rung decomposition with pre-committed gates, and
-the kill criteria.
+Status: R4 done (2026-11-05) — `bdg_square_lattice` (s-wave and the
+bond-sign d-wave), `exact_eigenvalues`, `chebyshev_moments`,
+`jackson_kernel`, and `kpm_dos` are implemented; the clean-BCS figure is
+`data/dos_swave_L128.csv`. Every R1–R4 gate passes at its pinned
+tolerance (measured R3: DOS asymmetry 1.1078e-2 vs envelope 5.6963e-2,
+peaks at +-0.203408 vs delta = 0.2 within one bin 1.2318e-2, in-gap
+weight 1.4370e-2 vs 2x leakage 2.8988e-2, delta->0 L1 0.1798 vs 0.35;
+measured R4: fitted nodal exponent 1.0489 in [0.9, 1.1] over
+[3w, Delta_max/4] at L = 512, R1/R3 gates re-run at the d-wave delta
+all pass — pins and derivations in the test_r4.cpp header). R5–R6
+remain open (GPU decision, disorder — none scheduled).
+One R3 pinning error, recorded in test_r3.cpp: the R2 moment-linf
+formula does not transfer to R3 parameters (failed at 5.20 sigma,
+diagnosed as the honest noise tail, no bound adjusted). This note fixes
+the physics scope, the oracles, the rung decomposition with
+pre-committed gates, and the kill criteria.
 
 Ordering: the priority extension of the KPM core — shortest path to a
 literature-recognizable superconducting figure, with analytic clean-BCS
@@ -87,6 +96,8 @@ adjusted after a run.
   ED-derived deterministic moments Tr T_n(H')/2N from the R1 eigensystem,
   within the stochastic-noise envelope — linf <= 4 sigma with
   sigma = 1/sqrt(2 * 2N * R), the kpm-tightbinding R2c discipline.
+  Done 2026-11-05: linf 3.2523e-02 at n = 477 vs 4 sigma = 5.8924e-02
+  (2N = 72, R = 32, n_cheb = 1000, seed 0x9E3779B9) — inside the bound.
 - **R3 — the clean-BCS figure.** Uniform s-wave Delta, L >= 128,
   periodic boundaries, Jackson damping. The resolution budget comes
   first (section 5) and sets n_cheb. Gates: reconstructed DOS symmetric
@@ -99,11 +110,40 @@ adjusted after a run.
   `exact_dos_L14.csv` within a cross-repo L1 bound whose number is
   pinned at R2, when the noise level is measured. This rung's figure is
   the deliverable of the whole extension.
+  Done 2026-11-05 (L = 128, delta = 0.2, n_cheb = 2000, R = 4, seed
+  0x9E3779B9, n_grid = 1024; pins and derivations in the test_r3.cpp
+  header): asymmetry 1.1078e-2 vs envelope 5.6963e-2; peaks at
+  +-0.203408, offsets 3.4085e-3 vs one bin 1.2318e-2; in-gap weight
+  1.4370e-2 vs 2 x L_computed = 2.8988e-2 (L_computed = 1.4494e-2,
+  exact from the kernel and the k-grid spectrum); cross-repo L1
+  0.1798 vs 0.35. Figure: `data/dos_swave_L128.csv` (`dos_figure`
+  regenerates it deterministically). Pinning error recorded in
+  test_r3.cpp: the R2 moment-linf 4-sigma formula fails at R3
+  parameters (measured 5.20 sigma, diagnosed noise tail, no bound
+  adjusted).
 - **R4 — d-wave option.** Bond-sign pairing builder plus the nodal-DOS
   check: low-energy weight linear in |E|, slope against the analytic
   nodal form (section 7 source first). Gates: fitted exponent in
   [0.9, 1.1] over an energy window pinned from the resolution budget;
   the R1/R3 gates re-run at the d-wave Delta.
+  Done 2026-11-05 (d-wave delta = 0.2; R1/R3 re-runs at the pinned R3
+  parameters, the exponent run at L = 512, R = 16 — pins and the
+  derivation of both choices in the test_r4.cpp header): R1 re-run
+  (L = 6, delta = 0.3) PHS 1.4e-14, Tr = 0 exactly, delta = 0 vs
+  +-spec(h) 1.2e-14, periodic grid 4.9e-15, cross-repo L = 14 exact;
+  gate V re-run 8.4e-14 (< 1e-12); S1 re-run asymmetry 9.8237e-3 vs
+  envelope 5.6136e-2; S2 re-run: peaks at +-0.777396 within one bin
+  1.2282e-2 of +-E* = 0.784465, the zone-edge saddle energy
+  4t delta/sqrt(t^2 + delta^2) — the d-wave DOS has no gap edge and the
+  antinodal scale 4 delta gives only a finite step (peak sits 2.3e-2
+  below 4 delta, printed as info with the diagnosis, never gated; the
+  s-wave S2 letter does not transfer); S3 does not transfer (no gap —
+  the nodal weight is the point of the rung) and D1 takes its
+  regression-guard role; S4 re-run L1 = 0.1798 vs 0.35. D1: fitted
+  exponent 1.0489 in [0.9, 1.1] over [3w, Delta_max/4] =
+  [0.0192, 0.2]; fitted slope 0.225 vs analytic 1/(8 pi t delta) =
+  0.1989 (info only — the exponent is the gate). No figure at this
+  rung; the extension's figure claim stays the R3 s-wave figure.
 - **R5 — GPU port, only if R6 justifies it.** Gate: GPU vs CPU moments
   linf <= 1e-13 at fixed seed and R = 32, the kpm-tightbinding GPU
   correctness discipline; benchmarks keep raw per-rep timings plus
@@ -190,12 +230,26 @@ To fetch and verify before any number derived from them is quoted:
   convention source; re-read the kernel-resolution sections for the
   section 5 bounds.
 - A lattice-BdG reference for the d-wave nodal DOS form (cuprate
-  mean-field class) — needed at R4 only.
+  mean-field class) — needed at R4 only. Fetched and read for R4
+  (2026-11-05): Balatsky, Vekhter, Zhu, Rev. Mod. Phys. 78, 373 (2006),
+  arXiv:cond-mat/0411318 — the clean d-wave DOS is linear in energy,
+  N(omega)/N0 = omega/Delta0 for omega << Delta0 (their Delta_k =
+  Delta0 cos 2phi). The test_r4 slope line uses the lattice velocity
+  form rho(E) = E/(pi v_F v_2) = E/(8 pi t delta) derived from the
+  R1-gated dispersion (N0 itself diverges at the half-filled van Hove
+  point, so the ratio form is not quotable directly at mu = 0).
 - An iron-pnictide multi-band reference — only if s± is ever opened;
   deferred per section 1.
 
 Nothing above is quoted until fetched and read. Nothing in this repo
-cites an unaudited source.
+cites an unaudited source. R3 note (2026-11-05): the rung closed without
+quoting any of the above — the leakage bound is the exact Jackson
+smearing of the k-grid spectrum (a section 2 oracle, not an external
+form), and the kernel width was measured from the computed kernel
+rather than quoted from the pi/N rule. The section 7 sources stay
+required for any claim about the analytic DOS *forms* (the R3 gates
+claim gap position, symmetry, and suppressed in-gap weight only; peak
+height is reported as resolution-limited, never gated).
 
 ## 8. Honest limitations
 

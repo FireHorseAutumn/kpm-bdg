@@ -1,12 +1,11 @@
-// Scaffold acceptance test: the parameter defaults and the stubs still on
-// record (R2 onward) throw std::logic_error until implemented. The R1 entry
-// points are live code now, gated in test_r1.cpp.
+// Scaffold acceptance test: the parameter defaults and the empty CSR state.
+// Every entry point is live code now, gated in test_r1.cpp through
+// test_r4.cpp (d-wave pairing is the R4 rung, gated in test_r4.cpp).
 // Every check prints its measured value; any failure exits nonzero.
 
 #include "bdg/bdg.hpp"
 
 #include <cstdio>
-#include <stdexcept>
 #include <string>
 
 namespace {
@@ -17,16 +16,6 @@ void check(bool ok, const char* name, const std::string& detail) {
   std::printf("[%s] %s: %s\n", ok ? "pass" : "FAIL", name, detail.c_str());
   if (!ok)
     ++failures;
-}
-
-template <typename F>
-bool throws_not_implemented(F&& f) {
-  try {
-    f();
-  } catch (const std::logic_error& e) {
-    return std::string(e.what()).find("not implemented") != std::string::npos;
-  }
-  return false;
 }
 
 } // namespace
@@ -53,14 +42,6 @@ int main() {
   const bdg::CsrMatrix empty;
   std::snprintf(buf, sizeof buf, "n=%d nnz=%d", empty.n, empty.nnz());
   check(empty.n == 0 && empty.nnz() == 0, "CsrMatrix empty state", buf);
-
-  check(throws_not_implemented([&] { bdg::chebyshev_moments(empty, kp); }),
-        "chebyshev_moments stub throws", "DESIGN.md R2");
-  check(throws_not_implemented([&] { bdg::jackson_kernel(16); }),
-        "jackson_kernel stub throws", "DESIGN.md R3");
-  check(throws_not_implemented(
-            [&] { bdg::kpm_dos({}, {}, 1.0, 0.0, 16); }),
-        "kpm_dos stub throws", "DESIGN.md R3");
 
   std::printf("%s (%d failure%s)\n",
               failures == 0 ? "ALL CHECKS PASSED" : "FAILURES", failures,

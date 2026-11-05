@@ -161,16 +161,6 @@ int main() {
   std::printf("[skip] cross-repo CSR gate: no sibling kpm-tightbinding checkout\n");
 #endif
 
-  bdg::BdgParams pd;
-  pd.pairing = bdg::Pairing::DWave;
-  bool dwave_throws = false;
-  try {
-    bdg::bdg_square_lattice(pd);
-  } catch (const std::logic_error& e) {
-    dwave_throws = std::string(e.what()).find("not implemented") != std::string::npos;
-  }
-  check(dwave_throws, "d-wave stays unimplemented", "rung R4 (DESIGN.md)");
-
   std::printf("%s (%d failure%s)\n",
               failures == 0 ? "ALL CHECKS PASSED" : "FAILURES", failures,
               failures == 1 ? "" : "s");
