@@ -39,6 +39,12 @@
 // (odd moments vanish by particle-hole symmetry). Gate V validates the
 // k-grid moments against ED at L = 6 to 1e-12 before they pin anything.
 //
+// Gate K (deterministic transcription pin, added in the 2026-11-08 audit):
+// the Jackson closed form (RMP Eq. 71) against the independent
+// harmonic-chain sum (Eqs. 57/66), linf < 1e-12 at the pinned n_cheb.
+// Nothing else pins the kernel: S3 consumes g self-consistently and S4's
+// dE = 0.1 bins are ~8x the kernel width, blind to damping.
+//
 // PIN cross-repo (gate S4): delta->0 at L = 14 open runs at
 // kpm-tightbinding's verified R2 configuration (n_cheb = 1000, R = 32,
 // a = 4.04, n_grid = 2048, seed default) against its committed
@@ -167,6 +173,25 @@ double ingap_weight(const std::vector<double>& mu,
   return w / kPi;
 }
 
+// Jackson factors from the harmonic-chain coefficients (RMP 78, 275 (2006)
+// Eqs. 57 and 66): a_nu = sin(q(nu+1)), q = pi/(N+1), then
+// g_n = (2/(N+1)) sum_{nu=1}^{N-n} a_nu a_{nu+n}. An evaluation path
+// independent of the Eq. 71 closed form in bdg::jackson_kernel.
+std::vector<double> jackson_via_chain(int n_cheb) {
+  const double q = kPi / (n_cheb + 1.0);
+  std::vector<double> a(n_cheb + 1, 0.0);
+  for (int nu = 0; nu <= n_cheb - 1; ++nu)
+    a[nu] = std::sin(q * (nu + 1));
+  std::vector<double> g(n_cheb + 1, 0.0);
+  for (int n = 0; n <= n_cheb; ++n) {
+    double acc = 0.0;
+    for (int nu = 0; nu + n <= n_cheb - 1; ++nu)
+      acc += a[nu] * a[nu + n];
+    g[n] = acc * (2.0 / (n_cheb + 1.0));
+  }
+  return g;
+}
+
 // Trapezoid weight of the gridded DOS inside |E| <= half_window
 // (kpm-tightbinding's window convention: both endpoints inside).
 double window_weight(const std::vector<std::pair<double, double>>& dos,
@@ -273,6 +298,19 @@ int main() {
   const std::vector<double> mu_ex =
       kgrid_moments(p.L, p.t, p.mu, p.delta, kp.a, kp.b, kp.n_cheb);
   const std::vector<double> g = bdg::jackson_kernel(kp.n_cheb);
+
+  // ---------- Gate K: the Jackson factors against the independent sum -----
+  // Deterministic transcription pin: the RMP Eq. 71 closed form against the
+  // harmonic-chain evaluation (Eqs. 57/66) at the pinned n_cheb. S3's
+  // L_computed, the S1 envelope, and the figure all consume g; no other
+  // gate pins the kernel transcription.
+  {
+    const double dk = linf_diff(g, jackson_via_chain(kp.n_cheb), nullptr);
+    std::snprintf(buf, sizeof buf,
+                  "linf|g_closed - g_chain| = %.3e, gate < 1e-12", dk);
+    check(dk < 1e-12, "K Jackson kernel transcription, n_cheb = 2000", buf);
+  }
+
   const auto dos = bdg::kpm_dos(mu, g, kp.a, kp.b, n_grid);
 
   const double sigma = 1.0 / std::sqrt(2.0 * (2.0 * N) * kp.n_random);
