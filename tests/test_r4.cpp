@@ -55,7 +55,9 @@
 //   R = 16: with the R3-validated sigma = 1/sqrt(2*2N*R), a Gaussian
 //   noise model of the fit gives std(alpha) 0.042 at R = 4 (the gate
 //   would sit at ~2 sigma of spread) vs 0.021 at R = 16 (~4 sigma).
-//   n_grid = 16384: ~2900 grid points in the window.
+//   n_grid = 16384: 231 grid points in the window (measured; the figure of
+//   ~2900 recorded at pinning time was wrong — the gate is unaffected, the
+//   fit needs only >= 10 points).
 //   The fit: PHS-symmetrized DOS (cancels the odd-moment noise), then
 //   weighted log-log least squares on the window points, weights
 //   rho_i^2 — the DOS noise is ~constant in E over the window, so the
