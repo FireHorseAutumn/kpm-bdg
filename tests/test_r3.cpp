@@ -324,6 +324,8 @@ int main() {
     int kd = 0;
     while (kd + 1 < M && dos[kd + 1].first <= p.delta)
       ++kd;
+    if (kd + 1 >= M)
+      throw std::runtime_error("S2: gap edge outside the DOS grid");
     const double bin = dos[kd + 1].first - dos[kd].first;
     const double dp = std::abs(dos[ipk_pos].first - p.delta);
     const double dn = std::abs(dos[ipk_neg].first + p.delta);

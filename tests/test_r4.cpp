@@ -506,6 +506,8 @@ int main() {
     int ke = 0;
     while (ke + 1 < M && dos[ke + 1].first <= estar)
       ++ke;
+    if (ke + 1 >= M)
+      throw std::runtime_error("S2: E* outside the DOS grid");
     const double bin = dos[ke + 1].first - dos[ke].first;
     const double dpk = std::abs(dos[ipk_pos].first - estar);
     const double dnk = std::abs(dos[ipk_neg].first + estar);
